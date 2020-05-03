@@ -13,12 +13,6 @@ library(plotly)
 library(tidyquant)
 library(reshape2)
 library(heatmaply)
-# library(tidyverse)
-
-my_stocks <- data.frame(
-    fond_name = c("Magellan C", "Asian growth"), 
-    symbol = c("0P00000PM7.F", "y")
-)
 
 
 
@@ -29,16 +23,12 @@ ui <- dashboardPage(
     dashboardSidebar(
         sidebarMenu(
             id = "menu",
+            menuItem("Portfolio analysis", tabName = "portfolio"),
             menuItem("Compare stocks", tabName = "compare"),
-            menuItem("Portfolio analysis", tabName = "portfolio")
+            menuItem("Info about the app", tabName = "info")
         ),
-        textInput(inputId = "startdate", "Start date", "2015-01-01"),
+        textInput(inputId = "startdate", "Start date", "2018-01-01"),
         textInput(inputId = "enddate", "End date", "2020-04-01"),
-        conditionalPanel(
-            condition = "input.menu == 'compare'",
-            textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG"),
-            textInput(inputId = "stock2", "Yahoo symbol 2", "NFLX"),
-        ),
         conditionalPanel(
             condition = "input.menu == 'portfolio'",
             HTML("&emsp;Compare the following list of <br>
@@ -49,12 +39,24 @@ ui <- dashboardPage(
                 value = "GOOG\nNFLX\nAMZN\nEVT.DE",
                 height = "200px"
             ),
+        ),
+        conditionalPanel(
+            condition = "input.menu == 'compare'",
+            textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG"),
+            textInput(inputId = "stock2", "Yahoo symbol 2", "NFLX"),
         )
     ),
     dashboardBody(
         tabItems(
+            tabItem(
+                tabName = "portfolio",
+                h2("Analyze portfolio of stocks and funds"),
+                h3("Validated input"),
+                tableOutput("tab_input_filtered"),
+                h3("Correlation of monthly returns"),
+                plotlyOutput("corheatmap"),
+            ),
             tabItem(tabName = "compare",
-                HTML("Stock data is queried by the yahoo fincance API with R tidyquant package."),
                 h2("Statistics"),
                 HTML("Capital Asset Pricing Model."),
                 # dataTableOutput("tab_capm"),
@@ -65,20 +67,45 @@ ui <- dashboardPage(
                 HTML("<br>")
             ),
             tabItem(
-                tabName = "portfolio",
-                h2("Analyze portfolio of stocks and funds"),
-                h3("Correlation of monthly returns"),
-                plotlyOutput("corheatmap"),
+                tabName = "info",
+                h2("Analyze  stocks using Yahoo finance data"),
+                HTML("Stock data is queried by the yahoo fincance API with R tidyquant package."),
+                br(),
+                a("Link to Yahoo Finance", href = "https://finance.yahoo.com/"),
+                br(),
+                a("Link to tidyquant package", href = "https://business-science.github.io/tidyquant/"),
+                br(),
+                h3("Rate of return"),
+                a("Link to Wikipedia \"Rate of return\"", href = "https://en.wikipedia.org/wiki/Rate_of_return"),
+                br(),
+                HTML("
+In finance, return is a profit on an investment. 
+It comprises any change in value of the investment, and/or cash flows which the 
+investor receives from the investment, such as interest payments or dividends. 
+It may be measured either in absolute terms (e.g., dollars) or as a percentage 
+of the amount invested. The latter is also called the holding period return.
+<br>
+A loss instead of a profit is described as a negative return, assuming the 
+amount invested is greater than zero.
+<br>
+The rate of return is a profit on an investment over a period of time, 
+expressed as a proportion of the original investment.[2] The time period is 
+typically a year, in which case the rate of return is referred to as 
+the annual return.
+                    ")
             )
         )
     )
 )
 
-# Define server ----
+
+
+
+# Define server -------------------------------------------------------------
 
 get_monthly_stock_returns <- function(
     stock_symbol, 
-    column_output, 
+    column_output = "monthly_return", 
     startdate = "2015-01-01", 
     enddate = "2020-04-01"
 ){
@@ -146,6 +173,25 @@ server <- function(input, output) {
     # startdate = "2015-01-01" 
     # enddate = "2020-04-01"
     # vec_input_symbols <- c("FB", "NFLX", "AMZN") 
+    output$tab_input_filtered <- renderTable({
+        vec_input_symbols <- unlist(
+            strsplit(gsub(" ", "", input$stocklist), "\n")
+        )
+        tib_multi_stocks <- vec_input_symbols %>% 
+            tq_get(
+                get = "stock.prices", from = input$startdate, to = input$enddate
+            ) %>% 
+            group_by(symbol)
+        # Check was could be matched
+        tmp_tab <- data.frame(Yahoo_symbol = vec_input_symbols)
+        tmp_filtered <- data.frame(
+            Yahoo_symbol = unique(tib_multi_stocks$symbol),
+            valid_input = TRUE
+        )
+        res <- merge(tmp_tab, tmp_filtered, by = "Yahoo_symbol", all = T)
+        return(res)
+    })
+    
     tib_multi <- reactive({
         vec_input_symbols <- unlist(
             strsplit(gsub(" ", "", input$stocklist), "\n")
@@ -179,9 +225,10 @@ server <- function(input, output) {
             value.var = "monthly_return"
         )
         mat <- tab_wide[, -1]
+        # browser()
         heatmaply_cor(
             # cor(mat[rowSums(is.na(mat)) == 0,], method = "pearson"),
-            cor(mat, method = "pearson"),
+            cor(mat, method = "pearson", use = "pairwise.complete.obs"),
             key.title = "Pearson\ncorrelation"   
         )
     })
