@@ -20,6 +20,18 @@ get_stockprices_table <- function(
   return(x)
 }
 
+shape_hline <- function(y = 0, color = "black") {
+  list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "paper",
+    y0 = y, 
+    y1 = y, 
+    line = list(color = color)
+  )
+}
+
 
 get_monthly_stock_returns <- function(
   stock_symbol, 

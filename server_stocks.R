@@ -3,6 +3,34 @@
 server_stocks <- function(input, output) {
   
   # TAB compare 2 stocks ------------------------------------------------------
+  # 
+  # plain stock prices
+  tab_prices <- reactive(get_stockprices_table(
+    c(input$stock1, input$stock2), 
+    input$startdate,
+    input$enddate
+  ))
+  
+  # tricky to implement if stocks do not have same date
+  output$plot_compare_relative_prices <- renderPlotly({
+    dt <- tab_prices()
+    tmp_min_date <- dt[date == min(date), .(price_first_date = adjusted), by = symbol]
+    dt <- dt[tmp_min_date, on = "symbol"]
+    dt[, price_relative_to_first_date := adjusted/price_first_date]
+    # browser()
+    
+    plot_ly(
+      data = dt, x = ~date, y = ~price_relative_to_first_date, 
+      color = ~symbol, text = ~paste0("Adjusted price: ", round(adjusted, 2))
+      ) %>%
+      add_lines() %>%
+      layout(
+        shapes = list(shape_hline(1)),
+        yaxis = list(title = "Relative price to first datum", type = "log")
+      )
+  })
+  
+  # monthly returns for 2 stocks
   tib_combo_return <- reactive({
     tib_monthly_return1 <- get_monthly_stock_returns(
       input$stock1, "monthly_return1",
@@ -22,7 +50,7 @@ server_stocks <- function(input, output) {
   })
   
   # Form output summary table
-  y <- reactive({
+  output$tab_capm <- renderTable({
     tib_capm <-  tib_combo_return() %>%
       tq_performance(
         Ra = monthly_return1, 
@@ -36,12 +64,9 @@ server_stocks <- function(input, output) {
     return(df_res)
   })
   
-  output$tab_capm <- renderTable({
-    y()
-  })
   
   # line plot 
-  output$plot2Lines <- renderPlotly({
+  output$plot_compare_monthly_returns <- renderPlotly({
     plot_ly(tib_combo_return(), x = ~date) %>%
       add_lines(name = input$stock1, y = ~monthly_return1) %>%
       add_lines(name = input$stock2, y = ~monthly_return2) %>%
@@ -127,7 +152,7 @@ server_stocks <- function(input, output) {
   output$tab_rawdata <- DT::renderDataTable(
     {
       get_stockprices_table(
-        unique(c(input$stock1, input$stock2), vec_input_symbols())
+        unique(c(input$stock1, input$stock2, vec_input_symbols()))
       )
     }, 
     rownames = FALSE, 
@@ -140,5 +165,5 @@ server_stocks <- function(input, output) {
     )
   )
   
-# end ---- 
+  # end ---- 
 }
