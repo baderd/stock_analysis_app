@@ -20,8 +20,12 @@ server_stocks <- function(input, output) {
     # browser()
     
     plot_ly(
-      data = dt, x = ~date, y = ~price_relative_to_first_date, 
-      color = ~symbol, text = ~paste0("Adjusted price: ", round(adjusted, 2))
+      data = dt, 
+      x = ~date, 
+      y = ~price_relative_to_first_date, 
+      color = ~symbol, 
+      colors = c("dodgerblue", "orange"),
+      text = ~paste0("Adjusted price: ", round(adjusted, 2))
       ) %>%
       add_lines() %>%
       layout(

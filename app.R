@@ -82,30 +82,7 @@ ui <- dashboardPage(
             tabItem(
                 tabName = "info",
                 h2("Analyze  stocks using Yahoo finance data"),
-                HTML("Stock data is queried by the yahoo fincance API with R tidyquant package."),
-                br(),
-                a("Link to Yahoo Finance", href = "https://finance.yahoo.com/"),
-                br(),
-                a("Link to tidyquant package", href = "https://business-science.github.io/tidyquant/"),
-                br(),
-                h3("Rate of return"),
-                a("Link to Wikipedia \"Rate of return\"", href = "https://en.wikipedia.org/wiki/Rate_of_return"),
-                br(),
-                HTML("
-In finance, return is a profit on an investment. 
-It comprises any change in value of the investment, and/or cash flows which the 
-investor receives from the investment, such as interest payments or dividends. 
-It may be measured either in absolute terms (e.g., dollars) or as a percentage 
-of the amount invested. The latter is also called the holding period return.
-<br>
-A loss instead of a profit is described as a negative return, assuming the 
-amount invested is greater than zero.
-<br>
-The rate of return is a profit on an investment over a period of time, 
-expressed as a proportion of the original investment.[2] The time period is 
-typically a year, in which case the rate of return is referred to as 
-the annual return.
-                    ")
+                HTML(readLines("shiny_info.html"))
             )
         )
     )
