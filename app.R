@@ -18,7 +18,12 @@ library(heatmaply)
 
 source("functions.R")
 source("server_stocks.R")
-
+tmp_key_file <- file.path("~/Documents/api_key_alphavantage.txt")
+if (!file.exists(tmp_key_file)) {
+    tmp_key <- NULL
+} else {
+    tmp_key <- readLines(tmp_key_file)
+}
 
 # Define UI ----
 ui <- dashboardPage(
@@ -33,12 +38,7 @@ ui <- dashboardPage(
         ),
         textInput(inputId = "startdate", "Start date", today() - 90),
         textInput(inputId = "enddate", "End date", today()),
-        textInput(inputId = "alphakey", "API key AlphaVantage", NULL),
-        conditionalPanel(
-            condition = "input.menu == 'compare'",
-            textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG"),
-            textInput(inputId = "stock2", "Yahoo symbol 2", "NFLX"),
-        ),
+        textInput(inputId = "alphakey", "API key AlphaVantage", tmp_key),
         conditionalPanel(
             condition = "input.menu == 'portfolio'",
             HTML("&emsp;Compare the following list of <br>
@@ -53,6 +53,7 @@ ui <- dashboardPage(
     ),
     dashboardBody(
         tabItems(
+            # ui portfolio -------------------------------------------------
             tabItem(
                 tabName = "portfolio",
                 h2("Analyze portfolio of stocks and funds"),
@@ -61,8 +62,26 @@ ui <- dashboardPage(
                 h3("Correlation of monthly returns"),
                 plotlyOutput("corheatmap"),
             ),
+            # ui compare ----------------------------------------------------
             tabItem(tabName = "compare",
+                h1("Compare 2 stocks"),
+                textInput(
+                    inputId = "text_search_symbol", 
+                    "Enter search text for yahoo symbols", 
+                    "EVT.DE"
+                ),
+                DT::DTOutput("tab_search_result"),
+                HTML("<br>"),
                 h2("Compare price development"),
+                div(
+                    style="display:inline-block",
+                    textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG")
+                ),
+                div(
+                    style="display:inline-block",
+                    textInput(inputId = "stock2", "Yahoo symbol 2", "NFLX")
+                ),
+                HTML("<br>"),
                 plotlyOutput("plot_compare_relative_prices"),
                 HTML("<br>"),
                 h2("Plot monthly returns"),

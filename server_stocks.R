@@ -4,6 +4,15 @@ server_stocks <- function(input, output) {
   
   # TAB compare 2 stocks ------------------------------------------------------
   # 
+  # search
+  output$tab_search_result <- DT::renderDT(
+    get_name_from_symbol(
+      keywords = input$text_search_symbol, key = input$alphakey
+    ),
+    rownames = FALSE, 
+    options = list(pageLength = 6)
+  )
+  # 
   # plain stock prices
   tab_prices <- reactive(get_stockprices_table(
     c(input$stock1, input$stock2), 
