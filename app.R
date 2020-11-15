@@ -11,6 +11,7 @@ library(shiny)
 library(shinydashboard)
 
 library(data.table)
+library(DT)
 library(plotly)
 library(tidyquant)
 library(reshape2)

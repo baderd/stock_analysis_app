@@ -53,10 +53,16 @@ get_monthly_stock_returns <- function(
 get_name_from_symbol <- function(
   keywords, key = input$alphakey, ...
 ){
-  alphavantager::av_api_key(key)
-  tab <- alphavantager::av_get(
-    keywords = keywords, av_fun = "SYMBOL_SEARCH", ...
-  )
+  # browser()
+  if (is.null(key) | is.na(key) | nchar(key) == 0 
+    | is.null(keywords) | is.na(keywords) | nchar(keywords) == 0) {
+    tab <- data.frame()
+  } else {
+    alphavantager::av_api_key(key)
+    tab <- alphavantager::av_get(
+      keywords = keywords, av_fun = "SYMBOL_SEARCH", ...
+    )
+  }
   return(tab)
 }
 
