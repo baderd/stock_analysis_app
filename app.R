@@ -12,6 +12,7 @@ library(shinydashboard)
 
 library(data.table)
 library(DT)
+library(crosstalk)
 library(plotly)
 library(tidyquant)
 library(reshape2)
@@ -27,6 +28,7 @@ if (!file.exists(tmp_key_file)) {
 }
 
 # Define UI ----
+# #+ ----
 ui <- dashboardPage(
     dashboardHeader(title = "Stocks DIY"),
     dashboardSidebar(
@@ -47,7 +49,7 @@ ui <- dashboardPage(
             textAreaInput(
                 inputId = "stocklist", 
                 label = "Enter Yahoo symbol list", 
-                value = "GOOG\nNFLX\nAMZN\nEVT.DE",
+                value = "GOOG \nNFLX \nAMZN \nEVT.DE \nMTUAY \nMRK \nBMWYY \nBNTX",
                 height = "200px"
             )
         )
@@ -60,6 +62,8 @@ ui <- dashboardPage(
                 h2("Analyze portfolio of stocks and funds"),
                 h3("Validated input"),
                 tableOutput("tab_input_filtered"),
+                h3("Compare relative price development"),
+                plotlyOutput("plot_portfolio_relative_prices"),
                 h3("Correlation of monthly returns"),
                 plotlyOutput("corheatmap"),
             ),
@@ -93,12 +97,14 @@ ui <- dashboardPage(
                 tableOutput("tab_capm"),
                 HTML("<br>")
             ),
+            # ui rawdata -----------------------------------------------------
             tabItem(
                 tabName = "data",
                 h2("Input data"),
                 DT::dataTableOutput("tab_rawdata"),
                 HTML("<br>")
             ),
+            # ui info -------------------------------------------------------
             tabItem(
                 tabName = "info",
                 h2("Analyze  stocks using Yahoo finance data"),

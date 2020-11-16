@@ -16,7 +16,8 @@ get_stockprices_table <- function(
     x = stock_symbols, get = "stock.prices", from = startdate, to = enddate, ...
   )
   x <- as.data.table(x)
-  x[, symbol := factor(symbol)]
+  setnames(x, "symbol", "yahoo_symbol")
+  x[, yahoo_symbol := factor(yahoo_symbol)]
   return(x)
 }
 
