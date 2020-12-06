@@ -55,9 +55,10 @@ get_name_from_symbol <- function(
   keywords, key = input$alphakey, ...
 ){
   # browser()
-  if (is.null(key) | is.na(key) | nchar(key) == 0 
-    | is.null(keywords) | is.na(keywords) | nchar(keywords) == 0) {
-    tab <- data.frame()
+  if (is.null(key) | is.na(key) | nchar(key) == 0) {
+    tab <- data.frame(Warning = "No API key provided!")
+  } else if (is.null(keywords) | is.na(keywords) | nchar(keywords) == 0) {
+    tab <- data.frame(Warning = "No search provided!")
   } else {
     alphavantager::av_api_key(key)
     tab <- alphavantager::av_get(
