@@ -125,7 +125,7 @@ server_stocks <- function(input, output) {
   # 
   # plain stock prices
   tab_portfolio_prices <- reactive(get_stockprices_table(
-    vec_input_symbols(), 
+    vec_input_symbols(),
     input$startdate,
     input$enddate
   ))
@@ -133,9 +133,6 @@ server_stocks <- function(input, output) {
   
   # period returns ---------------------------------------------------------
   tib_multi <- reactive({
-    # vec_input_symbols <- unlist(
-    #   strsplit(gsub(" ", "", input$stocklist), "\n")
-    # )
     tib_multi <- vec_input_symbols() %>% 
       tq_get(
         get = "stock.prices", from = input$startdate, to = input$enddate
@@ -162,7 +159,12 @@ server_stocks <- function(input, output) {
   # 
   output$plot_portfolio_relative_prices <- renderPlotly({
     dt <- tab_portfolio_prices()
-    tmp_min_date <- dt[date == min(date), .(price_first_date = adjusted), by = yahoo_symbol]
+    
+    # compute realitve price to first valid date with price info available
+    dt[!is.na(adjusted), first_valid_date := min(date, na.rm = T), by = yahoo_symbol]
+    tmp_min_date <- dt[
+      date == first_valid_date, .(price_first_date = adjusted), by = yahoo_symbol
+      ]
     dt <- dt[tmp_min_date, on = "yahoo_symbol"]
     dt[, price_relative_to_first_date := adjusted/price_first_date]
     # browser()
@@ -197,6 +199,7 @@ server_stocks <- function(input, output) {
         dynamic = TRUE,
         selectize = TRUE
       )
+    return(p)
   })
   
   # out: corheatmap--------------------------------------------------------
@@ -224,7 +227,9 @@ server_stocks <- function(input, output) {
   output$tab_rawdata <- DT::renderDataTable(
     {
       get_stockprices_table(
-        unique(c(input$stock1, input$stock2, vec_input_symbols()))
+        unique(c(input$stock1, input$stock2, vec_input_symbols())),
+        startdate = input$startdate, 
+        enddate = input$enddate
       )
     }, 
     rownames = FALSE, 
