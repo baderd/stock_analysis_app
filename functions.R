@@ -1,15 +1,15 @@
 # R functions
 
 #' get_stockprices_table
-#' 
-#' "stock.prices": Get the open, high, low, close, volume and adjusted stock 
-#' prices for a stock symbol from Yahoo Finance. 
+#'
+#' "stock.prices": Get the open, high, low, close, volume and adjusted stock
+#' prices for a stock symbol from Yahoo Finance.
 #' Wrapper for quantmod::getSymbols().
-#' 
+#'
 get_stockprices_table <- function(
-  stock_symbols,  
-  startdate = today() - 66, 
-  enddate = today(), 
+  stock_symbols,
+  startdate = today() - 66,
+  enddate = today(),
   ...
 ) {
   x <- tq_get(
@@ -23,30 +23,30 @@ get_stockprices_table <- function(
 
 shape_hline <- function(y = 0, color = "black") {
   list(
-    type = "line", 
-    x0 = 0, 
-    x1 = 1, 
+    type = "line",
+    x0 = 0,
+    x1 = 1,
     xref = "paper",
-    y0 = y, 
-    y1 = y, 
+    y0 = y,
+    y1 = y,
     line = list(color = color)
   )
 }
 
 
 get_monthly_stock_returns <- function(
-  stock_symbol, 
-  column_output = "monthly_return", 
-  startdate = today() - 30, 
+  stock_symbol,
+  column_output = "monthly_return",
+  startdate = today() - 30,
   enddate = today()
 ){
   stock_symbol %>%
     tq_get(get = "stock.prices", from = startdate, to = enddate) %>%
     tq_transmute(
-      select  = adjusted, 
-      mutate_fun = periodReturn, 
-      period = "monthly", 
-      col_rename = column_output, 
+      select  = adjusted,
+      mutate_fun = periodReturn,
+      period = "monthly",
+      col_rename = column_output,
       type = "arithmetic"
     )
 }
@@ -67,4 +67,42 @@ get_name_from_symbol <- function(
   }
   return(tab)
 }
+
+#' load_and_merge_ohlc_from_finanzen_net
+#'
+#' Save files with formatted names:
+#' "ohlc_ISIN_easy_name.csv"
+#'
+#' Example link for download:
+#' https://www.finanzen.net/fonds/historisch/amundi-funds-top-european-players-a-c-lu1883868819
+#'
+load_and_merge_ohlc_from_finanzen_net <- function(
+  dir_input = "~/Documents/ebase/",
+  pattern_input =  "ohlc",
+  basename_output = "ohlc_merged_finanzen_net.csv"
+){
+  tmp_input_files <- list.files(
+    dir_input, pattern = pattern_input, full.names = T
+  )
+  tab_merged <- rbindlist(lapply(
+    tmp_input_files, function(fn) {
+      tmp_tab <- fread(fn, sep = ",")
+      tmp_tab[, bname := basename(fn)]
+      tmp_tab[, ISIN := tstrsplit(bname, "_", keep = 2)]
+      tmp_tab[, name := gsub(
+        paste0("ohlc_", ISIN, "_(.*)\\.csv"), "\\1", bname
+      ), by = Datum]
+      tmp_tab[, bname := NULL]
+    }
+  ))
+  setnames(
+    tab_merged,
+    c("date", "open", "high", "low", "close", "volume", "ISIN", "name")
+  )
+  tab_merged[, date := as.Date(date, format = "%d.%m.%Y")]
+  setcolorder(tab_merged, c("ISIN", "name"))
+
+  fwrite(tab_merged, file = file.path(dir_input, basename_output))
+}
+# load_and_merge_ohlc_from_finanzen_net()
 
