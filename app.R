@@ -71,16 +71,30 @@ ui <- dashboardPage(
             h3("Validated input"),
             tableOutput("tab_input_filtered")
           )
-        )
+        ),
+        box(
+          fileInput(
+            inputId = "file_portfolio_upload",
+            label = "Choose CSV File",
+            multiple = FALSE,
+            accept = c(
+              "text/csv", "text/comma-separated-values,text/plain", ".csv"
+            )
+          ),
+          HTML(
+            "Expected column headers:<br>",
+            "ISIN, name, date, open, high, low, close, volume"
+          )
+        ) # end tabitem
       ),
       # ui portfolio plot -----------------------------------------------
       tabItem(
         tabName = "portfolio_plot",
         h2("Analyze portfolio of stocks and funds"),
         h3("Compare relative price development"),
-        plotlyOutput("plot_portfolio_relative_prices"),
+        plotlyOutput("plot_portfolio_relative_prices", height = "500px"),
         h3("Correlation of monthly returns"),
-        plotlyOutput("corheatmap"),
+        plotlyOutput("corheatmap", height = "700px"),
       ),
       # ui compare ----------------------------------------------------
       tabItem(tabName = "compare",
