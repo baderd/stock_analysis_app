@@ -1,27 +1,27 @@
 # Define server -------------------------------------------------------------
 
 server_stocks <- function(input, output) {
-  
+
   # TAB compare 2 stocks ------------------------------------------------------
-  # 
+  #
   # search
   output$tab_search_result <- DT::renderDT(
     get_name_from_symbol(
       keywords = input$text_search_symbol, key = input$alphakey
     ),
-    rownames = FALSE, 
+    rownames = FALSE,
     options = list(pageLength = 6)
   )
-  # 
+  #
   # plain stock prices
   tab_prices <- reactive(get_stockprices_table(
-    c(input$stock1, input$stock2), 
+    c(input$stock1, input$stock2),
     input$startdate,
     input$enddate
   ))
-  
+
   # out: plot_compare_relative_prices ----------------------------------------
-  # 
+  #
   # tricky to implement if stocks do not have same date
   output$plot_compare_relative_prices <- renderPlotly({
     dt <- tab_prices()
@@ -29,12 +29,12 @@ server_stocks <- function(input, output) {
     dt <- dt[tmp_min_date, on = "yahoo_symbol"]
     dt[, price_relative_to_first_date := adjusted/price_first_date]
     # browser()
-    
+
     plot_ly(
-      data = dt, 
-      x = ~date, 
-      y = ~price_relative_to_first_date, 
-      color = ~yahoo_symbol, 
+      data = dt,
+      x = ~date,
+      y = ~price_relative_to_first_date,
+      color = ~yahoo_symbol,
       colors = c("dodgerblue", "orange"),
       text = ~paste0("Adjusted price: ", round(adjusted, 2))
     ) %>%
@@ -44,9 +44,9 @@ server_stocks <- function(input, output) {
         yaxis = list(title = "Relative price to first datum", type = "log")
       )
   })
-  
+
   # period returns 2 stocks ---------------------------------------------
-  # 
+  #
   tib_combo_return <- reactive({
     tib_monthly_return1 <- get_monthly_stock_returns(
       input$stock1, "monthly_return1",
@@ -54,25 +54,25 @@ server_stocks <- function(input, output) {
       input$enddate
     )
     tib_monthly_return2 <- get_monthly_stock_returns(
-      input$stock2, "monthly_return2", 
+      input$stock2, "monthly_return2",
       input$startdate,
       input$enddate
     )
     tib_combo_return <- dplyr::left_join(
-      tib_monthly_return1, tib_monthly_return2, 
+      tib_monthly_return1, tib_monthly_return2,
       by = c("date" = "date")
     )
     return(tib_combo_return)
   })
-  
+
   # out: tab_capm ---------------------------------------------------------
-  # 
+  #
   # Form output summary table
   output$tab_capm <- renderTable({
     tib_capm <-  tib_combo_return() %>%
       tq_performance(
-        Ra = monthly_return1, 
-        Rb = monthly_return2, 
+        Ra = monthly_return1,
+        Rb = monthly_return2,
         performance_fun = table.CAPM
       )
     df_res <- data.frame(
@@ -81,35 +81,35 @@ server_stocks <- function(input, output) {
     )
     return(df_res)
   })
-  
-  
-  # line plot 
+
+
+  # line plot
   output$plot_compare_monthly_returns <- renderPlotly({
     plot_ly(tib_combo_return(), x = ~date) %>%
       add_lines(name = input$stock1, y = ~monthly_return1) %>%
       add_lines(name = input$stock2, y = ~monthly_return2) %>%
       layout(yaxis = list(title = "Monthly returns"))
   })
-  
+
   #+ ----
   # TAB build portfolio stats:  ------------------------------------------------
   #
-  # startdate = "2015-01-01" 
+  # startdate = "2015-01-01"
   # enddate = "2020-04-01"
-  # vec_input_symbols <- c("FB", "NFLX", "AMZN") 
-  # 
+  # vec_input_symbols <- c("FB", "NFLX", "AMZN")
+  #
   vec_input_symbols <- reactive({
     unlist(
       strsplit(gsub(" ", "", input$stocklist), "\n")
     )
   })
-  
+
   # validate input --------------------------------------------------------
   output$tab_input_filtered <- renderTable({
-    tib_multi_stocks <- vec_input_symbols() %>% 
+    tib_multi_stocks <- vec_input_symbols() %>%
       tq_get(
         get = "stock.prices", from = input$startdate, to = input$enddate
-      ) %>% 
+      ) %>%
       group_by(symbol)
     # Check was could be matched
     tmp_tab <- data.frame(Yahoo_symbol = vec_input_symbols())
@@ -120,70 +120,98 @@ server_stocks <- function(input, output) {
     res <- merge(tmp_tab, tmp_filtered, by = "Yahoo_symbol", all = T)
     return(res)
   })
-  
+
   # portfolio prices -----------------------------------------------------
-  # 
+  #
   # plain stock prices
-  tab_portfolio_prices <- reactive(get_stockprices_table(
-    vec_input_symbols(),
-    input$startdate,
-    input$enddate
-  ))
-  
-  
-  # period returns ---------------------------------------------------------
-  tib_multi <- reactive({
-    tib_multi <- vec_input_symbols() %>% 
-      tq_get(
-        get = "stock.prices", from = input$startdate, to = input$enddate
-      ) %>% 
-      group_by(symbol)
-    
-    # add monthly return
-    tib_multi <- dplyr::left_join(
-      tib_multi %>%
-        tq_transmute(
-          select  = adjusted, 
-          mutate_fun = periodReturn, 
-          period = "monthly", 
-          col_rename = "monthly_return", 
-          type = "arithmetic"
-        ),
-      tib_multi, 
-      by = c("symbol", "date")
+  tab_portfolio_prices <- reactive({
+    shiny::req(vec_input_symbols())
+
+    res <- get_stockprices_table(
+      vec_input_symbols(),
+      input$startdate,
+      input$enddate
     )
-    return(tib_multi)
+    res[, name := yahoo_symbol]
   })
-  
+
+
+  # load custom potfolio
+  tab_custom_potfolio <- reactiveVal(value = data.table())
+  observeEvent(
+    eventExpr = input$file_portfolio_upload,
+    handlerExpr = {
+      tmp_tab <- data.table::fread(
+        input$file_portfolio_upload$datapath
+      )
+      tmp_tab[, date := as.Date(date, format = "%Y-%m-%d")]
+
+      # update value
+      tab_custom_potfolio(tmp_tab)
+    }
+  )
+
+  # merge API and custom data ----------------------------------------------
+  #
+  tab_all_prices <- reactive({
+    shiny::req(tab_portfolio_prices(), tab_custom_potfolio())
+    tab_yahoo <- tab_portfolio_prices()
+    tab_custom <- tab_custom_potfolio()
+
+    if (nrow(tab_custom) > 0) {
+      res <- merge.data.table(
+        tab_yahoo,
+        tab_custom,
+        by = intersect(
+          names(tab_yahoo), names(tab_custom)
+        ),
+        all = TRUE
+      )
+      # browser()
+    } else {
+      res <- tab_yahoo
+    }
+    return(res)
+  })
+
+
+  #+ ----
   # out: plot_portfolio_relative_prices --------------------------------------
-  # 
+  #
   output$plot_portfolio_relative_prices <- renderPlotly({
-    dt <- tab_portfolio_prices()
-    
-    # compute realitve price to first valid date with price info available
-    dt[!is.na(adjusted), first_valid_date := min(date, na.rm = T), by = yahoo_symbol]
-    tmp_min_date <- dt[
-      date == first_valid_date, .(price_first_date = adjusted), by = yahoo_symbol
-      ]
-    dt <- dt[tmp_min_date, on = "yahoo_symbol"]
-    dt[, price_relative_to_first_date := adjusted/price_first_date]
     # browser()
-    
+    shiny::req(tab_all_prices())
+    dt <- tab_all_prices()
+
+    # compute realitve price to first valid date with price info available
+    dt[
+      !is.na(close),
+      first_valid_date := min(date, na.rm = T),
+      by = name
+      ]
+    tmp_min_date <- dt[
+      date == first_valid_date, .(price_first_date = close), by = name
+      ]
+    dt <- dt[tmp_min_date, on = "name"]
+    dt[, price_relative_to_first_date := close/price_first_date]
+    # browser()
+
     # build shared data object
-    shared_portfolio <- highlight_key(dt, ~yahoo_symbol, group = "portfolio") 
-    
+    shared_portfolio <- highlight_key(dt, ~name, group = "portfolio")
+
     # build plot
     p <- shared_portfolio %>%
       plot_ly(
-        x = ~date, 
-        y = ~price_relative_to_first_date, 
+        x = ~date,
+        y = ~price_relative_to_first_date,
         color = I("grey40"),
-        split = ~yahoo_symbol, 
+        split = ~name,
         hoverinfo = "text",
         text = ~paste0(
-          "SYMBOL: ", yahoo_symbol,
+          "Name: ", name,
+          "<br>SYMBOL: ", yahoo_symbol,
           "<br>Relative price: ", round(price_relative_to_first_date, 2),
-          "<br>Price: ", round(adjusted, 2),
+          "<br>Price: ", round(close, 2),
           "<br>Date: ", date
         )
       ) %>%
@@ -201,39 +229,39 @@ server_stocks <- function(input, output) {
       )
     return(p)
   })
-  
+
   # out: corheatmap--------------------------------------------------------
-  # 
-  # compute correlation between assets 
+  #
+  # compute correlation between assets
   output$corheatmap <- renderPlotly({
+    shiny::req(tab_all_prices())
     tab_wide <- dcast(
-      tib_multi(), 
-      substring(date, 1, 7) ~ symbol, 
-      value.var = "monthly_return"
+      tab_all_prices(),
+      date ~ name,
+      value.var = "close"
     )
     mat <- tab_wide[, -1]
     # browser()
     heatmaply_cor(
-      # cor(mat[rowSums(is.na(mat)) == 0,], method = "pearson"),
       cor(mat, method = "pearson", use = "pairwise.complete.obs"),
-      key.title = "Pearson\ncorrelation"   
+      key.title = "Pearson\ncorrelation"
     )
   })
-  
-  
+
+
   #+ ----
   # TAB rawdata ------------------------------------------------------------
-  # 
+  #
   output$tab_rawdata <- DT::renderDataTable(
     {
       get_stockprices_table(
         unique(c(input$stock1, input$stock2, vec_input_symbols())),
-        startdate = input$startdate, 
+        startdate = input$startdate,
         enddate = input$enddate
       )
-    }, 
-    rownames = FALSE, 
-    filter = "top", 
+    },
+    rownames = FALSE,
+    filter = "top",
     extensions = 'Buttons',
     options = list(
       pageLength = 20,
@@ -241,6 +269,6 @@ server_stocks <- function(input, output) {
       buttons = c('copy', 'csv', 'excel')
     )
   )
-  
-  # end ---- 
+
+  # end ----
 }
