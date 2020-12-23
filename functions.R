@@ -79,7 +79,7 @@ get_name_from_symbol <- function(
 load_and_merge_ohlc_from_finanzen_net <- function(
   dir_input = "~/Documents/ebase/",
   pattern_input =  "ohlc",
-  basename_output = "ohlc_merged_finanzen_net.csv"
+  basename_output = "merged_finanzen_net.csv"
 ){
   tmp_input_files <- list.files(
     dir_input, pattern = pattern_input, full.names = T
@@ -97,7 +97,7 @@ load_and_merge_ohlc_from_finanzen_net <- function(
   ))
   setnames(
     tab_merged,
-    c("date", "open", "high", "low", "close", "volume", "ISIN", "name")
+    c("date", "open", "close", "high", "low", "volume", "ISIN", "name")
   )
   tab_merged[, date := as.Date(date, format = "%d.%m.%Y")]
   setcolorder(tab_merged, c("ISIN", "name"))
