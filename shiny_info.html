@@ -1,7 +1,7 @@
 <h3>Background of the app</h3>
 
 Stock data is queried by the yahoo fincance API with R tidyquant package.
-Stick symbols can be saerched using the AlphaVantage API together with a 
+Stick symbols can be saerched using the AlphaVantage API together with a
 private API key (It is really free for private use, only email needed).
 <br>
 <a href="https://finance.yahoo.com/">Link to Yahoo Finance</a>
@@ -14,19 +14,43 @@ private API key (It is really free for private use, only email needed).
 <h3>Rate of return</h3>
 <a href = "https://en.wikipedia.org/wiki/Rate_of_return">Link to Wikipedia "Rate of return"</a>
 <br>
-In finance, return is a profit on an investment. 
-It comprises any change in value of the investment, and/or cash flows which the 
-investor receives from the investment, such as interest payments or dividends. 
-It may be measured either in absolute terms (e.g., dollars) or as a percentage 
+In finance, return is a profit on an investment.
+It comprises any change in value of the investment, and/or cash flows which the
+investor receives from the investment, such as interest payments or dividends.
+It may be measured either in absolute terms (e.g., dollars) or as a percentage
 of the amount invested. The latter is also called the holding period return.
 <br>
-A loss instead of a profit is described as a negative return, assuming the 
+A loss instead of a profit is described as a negative return, assuming the
 amount invested is greater than zero.
 <br>
-The rate of return is a profit on an investment over a period of time, 
-expressed as a proportion of the original investment.[2] The time period is 
-typically a year, in which case the rate of return is referred to as 
+The rate of return is a profit on an investment over a period of time,
+expressed as a proportion of the original investment.[2] The time period is
+typically a year, in which case the rate of return is referred to as
 the annual return.
+
+<h3>Download historical prices from funds via ISIN</h3>
+<br>
+<ul>
+  <li>go to <a href="https://www.finanzen.net">FINANZEN.NET</a> and search for your fund via ISIN</li>
+  <li>example "LU0061928585"</li>
+  <li>below the fund name "OekoWorld OekoVision Classic C Fonds", click on "Kurse: Historisch"</li>
+  <li>select a date some years past, e.g. 2 years ago</li>
+  <li>click on "Historische Kurse anzeigen"</li>
+  <li>starting with the header line: Datum, Eröffnung, Schluss, Tageshoch, Tagestief, Umsatz (St.)
+    copy until the last row and insert into a spreadsheet software
+  </li>
+  <li>Note: these are German formatted numbers!</li>
+  <li>Select the volume and the 4 price columns and replace (i)  "." with nothing and (ii) "," with "."
+    to get english number format
+  </li>
+  <li>now save the table as CSV with a special name:
+    "ohlc_%%ISIN%%_%%trivial_name%%.csv"
+  </li>
+  <li>save the historic-data-link for later reference:
+    https://www.finanzen.net/fonds/historisch/oekoworld-oekovision-classic-c-lu0061928585
+  </li>
+</ul>
+
 
 
 <h3>Warranty and License</h3>
@@ -34,11 +58,11 @@ the annual return.
 <a href="https://github.com/baderd/stock_analysis_app/blob/master/LICENSE">License file on github</a>
 <br>
 <br>
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
-OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, 
-OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
