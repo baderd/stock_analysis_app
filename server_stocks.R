@@ -34,7 +34,7 @@ server_stocks <- function(input, output) {
     shiny::req(tab_prices())
     dt <- tab_prices()
     # check for small input
-    if (length(unique(dt$dates)) < 2) {
+    if (length(unique(dt$date)) < 2) {
       return(plot_ly())
     }
     tmp_min_date <- dt[
