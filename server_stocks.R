@@ -15,20 +15,33 @@ server_stocks <- function(input, output) {
     )
     return(res)
   })
-  #
+
   # plain stock prices
-  tab_prices <- reactive(get_stockprices_table(
-    c(input$stock1, input$stock2),
-    input$startdate,
-    input$enddate
-  ))
+  tab_prices <- reactive({
+    shiny::req(input$stock1, input$stock2)
+    res <- get_stockprices_table(
+      c(input$stock1, input$stock2),
+      input$startdate,
+      input$enddate
+    )
+    return(res)
+  })
 
   # out: plot_compare_relative_prices ----------------------------------------
   #
   # tricky to implement if stocks do not have same date
   output$plot_compare_relative_prices <- renderPlotly({
+    shiny::req(tab_prices())
     dt <- tab_prices()
-    tmp_min_date <- dt[date == min(date), .(price_first_date = adjusted), by = yahoo_symbol]
+    # check for small input
+    if (length(unique(dt$dates)) < 2) {
+      return(plot_ly())
+    }
+    tmp_min_date <- dt[
+      date == min(date),
+      .(price_first_date = adjusted),
+      by = yahoo_symbol
+      ]
     dt <- dt[tmp_min_date, on = "yahoo_symbol"]
     dt[, price_relative_to_first_date := adjusted/price_first_date]
     # browser()
@@ -86,7 +99,7 @@ server_stocks <- function(input, output) {
   })
 
 
-  # line plot
+  # out: line plot period returns ------------------------------------------
   output$plot_compare_monthly_returns <- renderPlotly({
     plot_ly(tib_combo_return(), x = ~date) %>%
       add_lines(name = input$stock1, y = ~monthly_return1) %>%
@@ -94,8 +107,10 @@ server_stocks <- function(input, output) {
       layout(yaxis = list(title = "Monthly returns"))
   })
 
+
+
   #+ ----
-  # TAB build portfolio stats:  ------------------------------------------------
+  # TAB build portfolio ----------------------------------------------------
   #
   # startdate = "2015-01-01"
   # enddate = "2020-04-01"
