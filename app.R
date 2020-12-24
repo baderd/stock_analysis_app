@@ -56,37 +56,52 @@ ui <- dashboardPage(
       # ui portfolio create ---------------------------------------------
       tabItem(
         tabName = "portfolio_create",
-        h2("Analyze portfolio of stocks and funds"),
-        fluidRow(
-          box(
-            HTML("Compare the following list of Yahoo symbols (1 symbol per line)"),
-            textAreaInput(
-              inputId = "stocklist",
-              label = "Enter Yahoo symbol list",
-              value = "GOOG \nNFLX \nAMZN \nEVT.DE \nMTUAY \nMRK \nBMWYY \nBNTX",
-              height = "200px"
+        fluidPage(
+          h2("Analyze portfolio of stocks and funds"),
+          fluidRow(
+            box(
+              HTML("Compare the following list of Yahoo symbols (1 symbol per line)"),
+              textAreaInput(
+                inputId = "stocklist",
+                label = "Enter Yahoo symbol list",
+                value = "GOOG \nNFLX \nAMZN \nEVT.DE \nMTUAY \nMRK \nBMWYY \nBNTX",
+                height = "300px"
+              )
+            ),
+            box(
+              fileInput(
+                inputId = "file_portfolio_upload",
+                label = "Choose CSV File",
+                multiple = FALSE,
+                accept = c(
+                  "text/csv", "text/comma-separated-values,text/plain", ".csv"
+                )
+              ),
+              HTML(
+                "Expected column headers:<br>",
+                "ISIN, name, date, open, high, low, close, volume"
+              ),
+              br(),
+            ),
+            box(
+              textInput(
+                inputId = "text_portfolio_search",
+                "Enter search text for yahoo symbols (API key needed)",
+                "EVT.DE"
+              ),
+              DT::DTOutput("tab_portfolio_search")
             )
           ),
-          box(
-            h3("Validated input"),
-            tableOutput("tab_input_filtered")
-          )
-        ),
-        box(
-          fileInput(
-            inputId = "file_portfolio_upload",
-            label = "Choose CSV File",
-            multiple = FALSE,
-            accept = c(
-              "text/csv", "text/comma-separated-values,text/plain", ".csv"
+          fluidRow(
+            box(
+              title = "Validated input",
+              width = 12,
+              DT::DTOutput("tab_input_filtered", height = "auto")
             )
-          ),
-          HTML(
-            "Expected column headers:<br>",
-            "ISIN, name, date, open, high, low, close, volume"
           )
-        ) # end tabitem
-      ),
+        )
+      ), # end tabitem
+
       # ui portfolio plot -----------------------------------------------
       tabItem(
         tabName = "portfolio_plot",

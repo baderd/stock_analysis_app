@@ -5,13 +5,16 @@ server_stocks <- function(input, output) {
   # TAB compare 2 stocks ------------------------------------------------------
   #
   # search
-  output$tab_search_result <- DT::renderDT(
-    get_name_from_symbol(
+  output$tab_search_result <- DT::renderDT({
+    shiny::req(input$text_search_symbol)
+    tmp_tab <- get_name_from_symbol(
       keywords = input$text_search_symbol, key = input$alphakey
-    ),
-    rownames = FALSE,
-    options = list(pageLength = 6)
-  )
+    )
+    res <- DT::datatable(
+      tmp_tab, rownames = FALSE, options = list(pageLength = 6)
+    )
+    return(res)
+  })
   #
   # plain stock prices
   tab_prices <- reactive(get_stockprices_table(
@@ -99,27 +102,27 @@ server_stocks <- function(input, output) {
   # vec_input_symbols <- c("FB", "NFLX", "AMZN")
   #
   vec_input_symbols <- reactive({
+    shiny::req(input$stocklist)
     unlist(
-      strsplit(gsub(" ", "", input$stocklist), "\n")
+      strsplit(gsub(" +", "", input$stocklist), "\n")
     )
   })
 
-  # validate input --------------------------------------------------------
-  output$tab_input_filtered <- renderTable({
-    tib_multi_stocks <- vec_input_symbols() %>%
-      tq_get(
-        get = "stock.prices", from = input$startdate, to = input$enddate
-      ) %>%
-      group_by(symbol)
-    # Check was could be matched
-    tmp_tab <- data.frame(Yahoo_symbol = vec_input_symbols())
-    tmp_filtered <- data.frame(
-      Yahoo_symbol = unique(tib_multi_stocks$symbol),
-      valid_input = TRUE
+
+  # portfolio search --------------------------------------------------
+  #
+  output$tab_portfolio_search <- DT::renderDT({
+    shiny::req(input$text_portfolio_search)
+    tmp_tab <- get_name_from_symbol(
+      keywords = input$text_portfolio_search, key = input$alphakey
     )
-    res <- merge(tmp_tab, tmp_filtered, by = "Yahoo_symbol", all = T)
+    res <- DT::datatable(
+      tmp_tab[, c("symbol", "name", "type", "region")],
+      rownames = FALSE, options = list(pageLength = 6)
+    )
     return(res)
   })
+
 
   # portfolio prices -----------------------------------------------------
   #
@@ -136,7 +139,7 @@ server_stocks <- function(input, output) {
   })
 
 
-  # load custom potfolio
+  # load custom potfolio ------------------------------------------------
   tab_custom_potfolio <- reactiveVal(value = data.table())
   observeEvent(
     eventExpr = input$file_portfolio_upload,
@@ -176,6 +179,31 @@ server_stocks <- function(input, output) {
 
 
   #+ ----
+  #
+  # out: validate input --------------------------------------------------------
+  tab_validated_input <- reactiveVal(value = data.table())
+  observeEvent(
+    eventExpr = tab_all_prices(),
+    handlerExpr = {
+      # browser()
+      tmp_tab <- merge(
+        tab_all_prices(),
+        data.table(name = vec_input_symbols()),
+        by = "name",
+        all = T
+      )
+      res <- tmp_tab[, .(number_of_dates = .N), by = name]
+      res[, valid := number_of_dates > 1]
+      tab_validated_input(res)
+    }
+  )
+  output$tab_input_filtered <- DT::renderDataTable(
+    expr = {
+      shiny::req(tab_validated_input())
+      tab_validated_input()
+    }
+  )
+
   # out: plot_portfolio_relative_prices --------------------------------------
   #
   output$plot_portfolio_relative_prices <- renderPlotly({
