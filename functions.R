@@ -52,8 +52,9 @@ get_monthly_stock_returns <- function(
 }
 
 get_name_from_symbol <- function(
-  keywords, key = input$alphakey, ...
+  keywords, key = input$alphakey, return_only_exact_name = FALSE, ...
 ){
+  library(data.table)
   # browser()
   if (is.null(key) | is.na(key) | nchar(key) == 0) {
     tab <- data.frame(Warning = "No API key provided!")
@@ -61,11 +62,15 @@ get_name_from_symbol <- function(
     tab <- data.frame(Warning = "No search provided!")
   } else {
     alphavantager::av_api_key(key)
-    tab <- alphavantager::av_get(
+    tab <- as.data.table(alphavantager::av_get(
       keywords = keywords, av_fun = "SYMBOL_SEARCH", ...
-    )
+    ))
+    if (return_only_exact_name) {
+      exact_name <- tab[symbol == keywords, name]
+      return(exact_name)
+    }
   }
-  return(tab)
+  return((tab))
 }
 
 #' load_and_merge_ohlc_from_finanzen_net

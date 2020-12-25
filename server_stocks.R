@@ -132,7 +132,7 @@ server_stocks <- function(input, output) {
       keywords = input$text_portfolio_search, key = input$alphakey
     )
     res <- DT::datatable(
-      tmp_tab[, c("symbol", "name", "type", "region")],
+      tmp_tab[, c("symbol", "name", "type", "region"), with = F],
       rownames = FALSE, options = list(pageLength = 6)
     )
     return(res)
@@ -150,7 +150,25 @@ server_stocks <- function(input, output) {
       input$startdate,
       input$enddate
     )
-    res[, name := yahoo_symbol]
+    # search for trivial stock names
+    vec_all_symbols <- as.character(unique(
+      res[!is.na(yahoo_symbol), yahoo_symbol]
+    ))
+    if (length(vec_all_symbols) > 0) {
+      tmp_tab_names <- TAB_STOCK_LISTING[
+        symbol %in% vec_all_symbols, .(yahoo_symbol = symbol, name)
+        ]
+      res <- merge(
+        tmp_tab_names,
+        res,
+        by = "yahoo_symbol",
+        all = T
+      )
+    }
+    # fill remaining names
+    res[is.na(name), name := yahoo_symbol]
+
+    return(res)
   })
 
 
@@ -207,15 +225,31 @@ server_stocks <- function(input, output) {
         by = "name",
         all = T
       )
-      res <- tmp_tab[, .(number_of_dates = .N), by = name]
+
+      # count entries
+      tmp_keys <- "name"
+      if ("ISIN" %in% names(tmp_tab)) {
+        tmp_keys <- c("ISIN", tmp_keys)
+      }
+      if ("yahoo_symbol" %in% names(tmp_tab)) {
+        tmp_keys <- c("yahoo_symbol", tmp_keys)
+      }
+      res <- tmp_tab[!is.na(close), .(number_of_dates = .N), by = tmp_keys]
       res[, valid := number_of_dates > 1]
+
+      # update result table
       tab_validated_input(res)
     }
   )
   output$tab_input_filtered <- DT::renderDataTable(
     expr = {
       shiny::req(tab_validated_input())
-      tab_validated_input()
+      res <- DT::datatable(
+        tab_validated_input(),
+        rownames = FALSE,
+        options = list(pageLength = nrow(tab_validated_input()))
+      )
+      return(res)
     }
   )
 

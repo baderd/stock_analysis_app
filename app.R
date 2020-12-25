@@ -19,6 +19,11 @@ library(heatmaply)
 
 source("functions.R")
 source("server_stocks.R")
+
+file_stock_lists <- list.files(pattern = "listing_status_stocks_and_etfs_.+.csv")
+TAB_STOCK_LISTING <- rbindlist(lapply(file_stock_lists, fread))
+TAB_STOCK_LISTING <- unique(TAB_STOCK_LISTING[, .(symbol, name)])
+
 tmp_key_file <- file.path("~/Documents/api_key_alphavantage.txt")
 if (!file.exists(tmp_key_file)) {
   tmp_key <- NULL
@@ -59,16 +64,24 @@ ui <- dashboardPage(
         fluidPage(
           h2("Analyze portfolio of stocks and funds"),
           fluidRow(
-            box(
+            shinydashboard::box(
+              title = "Create your portfolio",
               HTML("Compare the following list of Yahoo symbols (1 symbol per line)"),
               textAreaInput(
                 inputId = "stocklist",
                 label = "Enter Yahoo symbol list",
-                value = "GOOG \nNFLX \nAMZN \nEVT.DE \nMTUAY \nMRK \nBMWYY \nBNTX",
+                value = "GOOG \nNFLX \nAMZN \nEVTCY \nMTUAY \nMRK \nBMWYY \nBNTX",
                 height = "300px"
               )
             ),
-            box(
+            shinydashboard::box(
+              title = "Upload custom file",
+              HTML(
+                "If your favorite stock or funds are not available on yahoo finance, ",
+                "you can also upload your own stock price data in OHLC format. ",
+                "Read more about this option at the tab: Info about the app."
+              ),
+              br(),
               fileInput(
                 inputId = "file_portfolio_upload",
                 label = "Choose CSV File",
@@ -87,7 +100,7 @@ ui <- dashboardPage(
               textInput(
                 inputId = "text_portfolio_search",
                 "Enter search text for yahoo symbols (API key needed)",
-                "EVT.DE"
+                "Evotec"
               ),
               DT::DTOutput("tab_portfolio_search")
             )
@@ -116,8 +129,8 @@ ui <- dashboardPage(
         h1("Compare 2 stocks"),
         textInput(
           inputId = "text_search_symbol",
-          "Enter search text for yahoo symbols (API key needed)",
-          "EVT.DE"
+          "Enter search text for yahoo symbols \n(API key required)",
+          "Evotec"
         ),
         DT::DTOutput("tab_search_result"),
         HTML("<br>"),
@@ -128,7 +141,7 @@ ui <- dashboardPage(
         ),
         div(
           style="display:inline-block",
-          textInput(inputId = "stock2", "Yahoo symbol 2", "NFLX")
+          textInput(inputId = "stock2", "Yahoo symbol 2", "EVTCY")
         ),
         HTML("<br>"),
         plotlyOutput("plot_compare_relative_prices"),
