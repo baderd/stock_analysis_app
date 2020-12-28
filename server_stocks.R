@@ -1,15 +1,32 @@
 # Define server -------------------------------------------------------------
 
+FILE_STOCK_LIST <- "listing_status_stocks_and_etfs.csv"
+if (file.exists(FILE_STOCK_LIST)) {
+  TAB_STOCK_LISTING <- fread(file = FILE_STOCK_LIST)
+} else {
+  TAB_STOCK_LISTING <- data.table()
+}
+
+
 server_stocks <- function(input, output) {
+
 
   # TAB compare 2 stocks ------------------------------------------------------
   #
   # search
   output$tab_search_result <- DT::renderDT({
     shiny::req(input$text_search_symbol)
-    tmp_tab <- get_name_from_symbol(
-      keywords = input$text_search_symbol, key = input$alphakey
-    )
+    if (!is.null(input$alphakey) && nchar(input$alphakey) > 0 ) {
+      tmp_tab <- get_name_from_symbol(
+        keywords = input$text_search_symbol, key = input$alphakey
+      )
+    } else {
+      tmp_search <- paste0(".*", input$text_search_symbol, ".*")
+      tmp_tab <- TAB_STOCK_LISTING[
+        grepl(tmp_search, name, ignore.case = T)
+        | grepl(tmp_search, symbol, ignore.case = T)
+        ]
+    }
     res <- DT::datatable(
       tmp_tab, rownames = FALSE, options = list(pageLength = 6)
     )
@@ -128,9 +145,17 @@ server_stocks <- function(input, output) {
   #
   output$tab_portfolio_search <- DT::renderDT({
     shiny::req(input$text_portfolio_search)
-    tmp_tab <- get_name_from_symbol(
-      keywords = input$text_portfolio_search, key = input$alphakey
-    )
+    if (!is.null(input$alphakey) && nchar(input$alphakey) > 0 ) {
+      tmp_tab <- get_name_from_symbol(
+        keywords = input$text_portfolio_search, key = input$alphakey
+      )
+    } else {
+      tmp_search <- paste0(".*", input$text_portfolio_search, ".*")
+      tmp_tab <- TAB_STOCK_LISTING[
+        grepl(tmp_search, name, ignore.case = T)
+        | grepl(tmp_search, symbol, ignore.case = T)
+        ]
+    }
     res <- DT::datatable(
       tmp_tab[, c("symbol", "name", "type", "region"), with = F],
       rownames = FALSE, options = list(pageLength = 6)

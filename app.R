@@ -20,14 +20,8 @@ library(heatmaply)
 source("functions.R")
 source("server_stocks.R")
 
-FILE_STOCK_LIST <- "listing_status_stocks_and_etfs.csv"
-if (file.exists(FILE_STOCK_LIST)) {
-  TAB_STOCK_LISTING <- fread(file = FILE_STOCK_LIST)
-} else {
-  TAB_STOCK_LISTING <- data.table()
-}
 
-tmp_key_file <- file.path("~/Documents/api_key_alphavantage.txt")
+tmp_key_file <- "~/Documents/api_key_alphavantage.txt"
 if (!file.exists(tmp_key_file)) {
   tmp_key <- NULL
 } else {
@@ -51,9 +45,6 @@ ui <- dashboardPage(
     textInput(inputId = "startdate", "Start date", today() - 90),
     textInput(inputId = "enddate", "End date", today()),
     textInput(inputId = "alphakey", "API key AlphaVantage", tmp_key),
-    HTML(
-      '<a href=\"https://www.alphavantage.co/support/#api-key\">Get you  API key here!</a>'
-    ),
     hr(),
     conditionalPanel(
       condition = "input.menu == 'portfolio_create'"
@@ -61,6 +52,61 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabItems(
+      # ui compare ----------------------------------------------------
+      tabItem(
+        tabName = "compare",
+        fluidPage(
+          h1("Compare 2 stocks"),
+          box(
+            title = "Step1: Search the symbol of your favorite stock",
+            width = 12,
+            HTML("You get best search results with an ALphaVantage API key."),
+            a(href="https://www.alphavantage.co/support/#api-key", "Get your API key here!"),
+            br(),
+            HTML("Alternatively search for symbols directly on yahoo finance:"),
+            a(href="https://finance.yahoo.com/", "Link to Yahoo Finance"),
+            br(),
+            br(),
+            textInput(
+              inputId = "text_search_symbol",
+              "Enter search text for yahoo symbols",
+              "GOOG"
+            ),
+            DT::DTOutput("tab_search_result")
+          ),
+          box(
+            title = "Step2: Compare price development",
+            width = 12,
+            div(
+              style="display:inline-block",
+              textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG")
+            ),
+            div(
+              style="display:inline-block",
+              textInput(inputId = "stock2", "Yahoo symbol 2", "EVTCY")
+            ),
+            HTML("<br>"),
+            plotlyOutput("plot_compare_relative_prices")
+          ),
+          box(
+            title = "Step3: Advanced financial statistics",
+            width = 12,
+            column(
+              width = 9,
+              h3("Plot monthly returns"),
+              HTML(readLines("info_rate_of_return.html")),
+              br(),
+              plotlyOutput("plot_compare_monthly_returns")
+            ),
+            column(
+              width = 3,
+              h3("Capital Asset Pricing Model"),
+              tableOutput("tab_capm")
+            )
+          )
+        )
+      ),
+
       # ui portfolio create ---------------------------------------------
       tabItem(
         tabName = "portfolio_create",
@@ -102,7 +148,7 @@ ui <- dashboardPage(
             box(
               textInput(
                 inputId = "text_portfolio_search",
-                "Enter search text for yahoo symbols (API key needed)",
+                "Enter search text for yahoo symbols",
                 "Evotec"
               ),
               DT::DTOutput("tab_portfolio_search")
@@ -127,53 +173,7 @@ ui <- dashboardPage(
         h3("Correlation of monthly returns"),
         plotlyOutput("corheatmap", height = "700px"),
       ),
-      # ui compare ----------------------------------------------------
-      tabItem(
-        tabName = "compare",
-        fluidPage(
-          h1("Compare 2 stocks"),
-          box(
-            title = "Step1: Search the symbol of your favorite stock",
-            width = 12,
-            textInput(
-              inputId = "text_search_symbol",
-              "Enter search text for yahoo symbols \n(API key required)",
-              "Evotec"
-            ),
-            DT::DTOutput("tab_search_result")
-          ),
-          box(
-            title = "Step2: Compare price development",
-            width = 12,
-            div(
-              style="display:inline-block",
-              textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG")
-            ),
-            div(
-              style="display:inline-block",
-              textInput(inputId = "stock2", "Yahoo symbol 2", "EVTCY")
-            ),
-            HTML("<br>"),
-            plotlyOutput("plot_compare_relative_prices")
-          ),
-          box(
-            title = "Step3: Advanced financial statistics",
-            width = 12,
-            column(
-              width = 9,
-              h3("Plot monthly returns"),
-              HTML(readLines("info_rate_of_return.html")),
-              br(),
-              plotlyOutput("plot_compare_monthly_returns")
-            ),
-            column(
-              width = 3,
-              h3("Capital Asset Pricing Model"),
-              tableOutput("tab_capm")
-            )
-          )
-        )
-      ),
+
       # ui rawdata -----------------------------------------------------
       tabItem(
         tabName = "data",
