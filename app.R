@@ -20,9 +20,12 @@ library(heatmaply)
 source("functions.R")
 source("server_stocks.R")
 
-file_stock_lists <- list.files(pattern = "listing_status_stocks_and_etfs_.+.csv")
-TAB_STOCK_LISTING <- rbindlist(lapply(file_stock_lists, fread))
-TAB_STOCK_LISTING <- unique(TAB_STOCK_LISTING[, .(symbol, name)])
+FILE_STOCK_LIST <- "listing_status_stocks_and_etfs.csv"
+if (file.exists(FILE_STOCK_LIST)) {
+  TAB_STOCK_LISTING <- fread(file = FILE_STOCK_LIST)
+} else {
+  TAB_STOCK_LISTING <- data.table()
+}
 
 tmp_key_file <- file.path("~/Documents/api_key_alphavantage.txt")
 if (!file.exists(tmp_key_file)) {
@@ -125,34 +128,51 @@ ui <- dashboardPage(
         plotlyOutput("corheatmap", height = "700px"),
       ),
       # ui compare ----------------------------------------------------
-      tabItem(tabName = "compare",
-        h1("Compare 2 stocks"),
-        textInput(
-          inputId = "text_search_symbol",
-          "Enter search text for yahoo symbols \n(API key required)",
-          "Evotec"
-        ),
-        DT::DTOutput("tab_search_result"),
-        HTML("<br>"),
-        h2("Compare price development"),
-        div(
-          style="display:inline-block",
-          textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG")
-        ),
-        div(
-          style="display:inline-block",
-          textInput(inputId = "stock2", "Yahoo symbol 2", "EVTCY")
-        ),
-        HTML("<br>"),
-        plotlyOutput("plot_compare_relative_prices"),
-        HTML("<br>"),
-        h2("Plot monthly returns"),
-        plotlyOutput("plot_compare_monthly_returns"),
-        HTML("<br>"),
-        h2("Statistics"),
-        HTML("Capital Asset Pricing Model."),
-        tableOutput("tab_capm"),
-        HTML("<br>")
+      tabItem(
+        tabName = "compare",
+        fluidPage(
+          h1("Compare 2 stocks"),
+          box(
+            title = "Step1: Search the symbol of your favorite stock",
+            width = 12,
+            textInput(
+              inputId = "text_search_symbol",
+              "Enter search text for yahoo symbols \n(API key required)",
+              "Evotec"
+            ),
+            DT::DTOutput("tab_search_result")
+          ),
+          box(
+            title = "Step2: Compare price development",
+            width = 12,
+            div(
+              style="display:inline-block",
+              textInput(inputId = "stock1", "Yahoo symbol 1", "GOOG")
+            ),
+            div(
+              style="display:inline-block",
+              textInput(inputId = "stock2", "Yahoo symbol 2", "EVTCY")
+            ),
+            HTML("<br>"),
+            plotlyOutput("plot_compare_relative_prices")
+          ),
+          box(
+            title = "Step3: Advanced financial statistics",
+            width = 12,
+            column(
+              width = 9,
+              h3("Plot monthly returns"),
+              HTML(readLines("info_rate_of_return.html")),
+              br(),
+              plotlyOutput("plot_compare_monthly_returns")
+            ),
+            column(
+              width = 3,
+              h3("Capital Asset Pricing Model"),
+              tableOutput("tab_capm")
+            )
+          )
+        )
       ),
       # ui rawdata -----------------------------------------------------
       tabItem(

@@ -154,7 +154,7 @@ server_stocks <- function(input, output) {
     vec_all_symbols <- as.character(unique(
       res[!is.na(yahoo_symbol), yahoo_symbol]
     ))
-    if (length(vec_all_symbols) > 0) {
+    if (length(vec_all_symbols) > 0 & nrow(TAB_STOCK_LISTING) > 0) {
       tmp_tab_names <- TAB_STOCK_LISTING[
         symbol %in% vec_all_symbols, .(yahoo_symbol = symbol, name)
         ]
