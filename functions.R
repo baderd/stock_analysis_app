@@ -111,3 +111,17 @@ load_and_merge_ohlc_from_finanzen_net <- function(
 }
 # load_and_merge_ohlc_from_finanzen_net()
 
+
+load_and_merge_stock_listings <- function() {
+  library(data.table)
+  file_stock_lists <- list.files(
+    path = "~/Documents/ebase/",
+    pattern = "listing_status_stocks_and_etfs_.+.csv",
+    full.names = T
+  )
+  TAB_STOCK_LISTING <- rbindlist(lapply(file_stock_lists, fread))
+  TAB_STOCK_LISTING <- unique(TAB_STOCK_LISTING[, .(symbol, name)])
+  fwrite(TAB_STOCK_LISTING, file = "listing_status_stocks_and_etfs.csv")
+}
+# load_and_merge_stock_listings()
+
