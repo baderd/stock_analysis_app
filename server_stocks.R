@@ -395,15 +395,15 @@ server_stocks <- function(input, output) {
 
       # style HTML table
       res <- DT::datatable(
-        tab_max_date[, .(name, percent_change)],
+        tab_max_date[, .(Name = name, `Change [%]` = percent_change)],
         options = list(
           pageLength = nrow(tab_max_date), paging = F, searching = F
         ),
         rownames = F
       ) %>%
-        formatRound('percent_change', digits = 1) %>%
+        formatRound('Change [%]', digits = 1) %>%
         formatStyle(
-          'percent_change',
+          'Change [%]',
           color = styleInterval(0, c('red', 'black')),
           textAlign = "right"
         )
