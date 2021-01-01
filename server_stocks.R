@@ -134,10 +134,13 @@ server_stocks <- function(input, output) {
   # vec_input_symbols <- c("FB", "NFLX", "AMZN")
   #
   vec_input_symbols <- reactive({
-    shiny::req(input$stocklist)
-    unlist(
+    if (is.null(input$stocklist)) {
+      return("")
+    }
+    res <- unlist(
       strsplit(gsub(" +", "", input$stocklist), "\n")
     )
+    return(res)
   })
 
 
@@ -156,8 +159,12 @@ server_stocks <- function(input, output) {
         | grepl(tmp_search, symbol, ignore.case = T)
         ]
     }
+    tmp_columns <- intersect(
+      names(tmp_tab),
+      c("symbol", "name", "type", "region", "exchange", "assetType")
+    )
     res <- DT::datatable(
-      tmp_tab[, c("symbol", "name", "type", "region"), with = F],
+      tmp_tab[, tmp_columns, with = F],
       rownames = FALSE, options = list(pageLength = 6)
     )
     return(res)
@@ -167,34 +174,43 @@ server_stocks <- function(input, output) {
   # portfolio prices -----------------------------------------------------
   #
   # plain stock prices
-  tab_portfolio_prices <- reactive({
-    shiny::req(vec_input_symbols())
+  tab_yahoo_portfolio <- eventReactive(
+    eventExpr = input$button_portfolio,
+    valueExpr = {
+      shiny::req(input$date1_portfolio, input$date2_portfolio)
+      # browser()
 
-    res <- get_stockprices_table(
-      vec_input_symbols(),
-      input$startdate,
-      input$enddate
-    )
-    # search for trivial stock names
-    vec_all_symbols <- as.character(unique(
-      res[!is.na(yahoo_symbol), yahoo_symbol]
-    ))
-    if (length(vec_all_symbols) > 0 & nrow(TAB_STOCK_LISTING) > 0) {
-      tmp_tab_names <- TAB_STOCK_LISTING[
-        symbol %in% vec_all_symbols, .(yahoo_symbol = symbol, name)
-        ]
-      res <- merge(
-        tmp_tab_names,
-        res,
-        by = "yahoo_symbol",
-        all = T
+      if (length(vec_input_symbols()) == 0) {
+        return(data.table())
+      }
+      res <- get_stockprices_table(
+        vec_input_symbols(),
+        input$date1_portfolio,
+        input$date2_portfolio
       )
-    }
-    # fill remaining names
-    res[is.na(name), name := yahoo_symbol]
+      if (nrow(res) == 0) {
+        return(data.table())
+      }
+      # search for trivial stock names
+      vec_all_symbols <- as.character(unique(
+        res[!is.na(yahoo_symbol), yahoo_symbol]
+      ))
+      if (length(vec_all_symbols) > 0 & nrow(TAB_STOCK_LISTING) > 0) {
+        tmp_tab_names <- TAB_STOCK_LISTING[
+          symbol %in% vec_all_symbols, .(yahoo_symbol = symbol, name)
+          ]
+        res <- merge(
+          tmp_tab_names,
+          res,
+          by = "yahoo_symbol",
+          all = T
+        )
+      }
+      # fill remaining names
+      res[is.na(name), name := yahoo_symbol]
 
-    return(res)
-  })
+      return(res)
+    })
 
 
   # load custom potfolio ------------------------------------------------
@@ -202,24 +218,33 @@ server_stocks <- function(input, output) {
   observeEvent(
     eventExpr = input$file_portfolio_upload,
     handlerExpr = {
-      tmp_tab <- data.table::fread(
-        input$file_portfolio_upload$datapath
-      )
-      tmp_tab[, date := as.Date(date, format = "%Y-%m-%d")]
+      tmp_file <- input$file_portfolio_upload$datapath
+      if (!file.exists(tmp_file)) {
+        return(data.table())
+      }
+      tmp_tab <- data.table::fread(tmp_file)
 
+      # TODO: check input format
+      #
+
+      # format date column
+      if (nrow(tmp_tab) > 0) {
+        tmp_tab[, date := as.Date(date, format = "%Y-%m-%d")]
+      }
       # update value
       tab_custom_potfolio(tmp_tab)
     }
   )
 
-  # merge API and custom data ----------------------------------------------
+  # merge yahoo and custom data ----------------------------------------------
   #
   tab_all_prices <- reactive({
-    shiny::req(tab_portfolio_prices(), tab_custom_potfolio())
-    tab_yahoo <- tab_portfolio_prices()
+    # browser()
+    shiny::req(tab_yahoo_portfolio(), tab_custom_potfolio())
+    tab_yahoo <- tab_yahoo_portfolio()
     tab_custom <- tab_custom_potfolio()
 
-    if (nrow(tab_custom) > 0) {
+    if (nrow(tab_yahoo) > 0 & nrow(tab_custom) > 0) {
       res <- merge.data.table(
         tab_yahoo,
         tab_custom,
@@ -229,9 +254,28 @@ server_stocks <- function(input, output) {
         all = TRUE
       )
       # browser()
-    } else {
+    } else if (nrow(tab_yahoo) > 0) {
       res <- tab_yahoo
+    } else if (nrow(tab_custom) > 0) {
+      res <- tab_custom
+    } else {
+      res <- data.table()
+      return(res)
     }
+
+    # compute realitve price to first valid date with price info available
+    res[
+      !is.na(close),
+      first_valid_date := min(date, na.rm = T),
+      by = name
+      ]
+    tmp_min_date <- res[
+      date == first_valid_date, .(price_first_date = close), by = name
+      ]
+    res <- res[tmp_min_date, on = "name"]
+    res[, price_relative_to_first_date := close/price_first_date]
+    # browser()
+
     return(res)
   })
 
@@ -244,28 +288,33 @@ server_stocks <- function(input, output) {
     eventExpr = tab_all_prices(),
     handlerExpr = {
       # browser()
-      tmp_tab <- merge(
-        tab_all_prices(),
-        data.table(name = vec_input_symbols()),
-        by = "name",
-        all = T
-      )
+      shiny::req(tab_all_prices())
+      if (nrow(tab_all_prices()) == 0) {
+        res <- data.table(WARNING = "No valid data provided!")
+      } else {
+        tmp_tab <- merge(
+          tab_all_prices(),
+          data.table(name = vec_input_symbols()),
+          by = "name",
+          all = T
+        )
 
-      # count entries
-      tmp_keys <- "name"
-      if ("ISIN" %in% names(tmp_tab)) {
-        tmp_keys <- c("ISIN", tmp_keys)
+        # count entries
+        tmp_keys <- "name"
+        if ("ISIN" %in% names(tmp_tab)) {
+          tmp_keys <- c("ISIN", tmp_keys)
+        }
+        if ("yahoo_symbol" %in% names(tmp_tab)) {
+          tmp_keys <- c("yahoo_symbol", tmp_keys)
+        }
+        res <- tmp_tab[!is.na(close), .(number_of_dates = .N), by = tmp_keys]
+        res[, valid := number_of_dates > 1]
       }
-      if ("yahoo_symbol" %in% names(tmp_tab)) {
-        tmp_keys <- c("yahoo_symbol", tmp_keys)
-      }
-      res <- tmp_tab[!is.na(close), .(number_of_dates = .N), by = tmp_keys]
-      res[, valid := number_of_dates > 1]
-
       # update result table
       tab_validated_input(res)
     }
   )
+
   output$tab_input_filtered <- DT::renderDataTable(
     expr = {
       shiny::req(tab_validated_input())
@@ -283,23 +332,11 @@ server_stocks <- function(input, output) {
   output$plot_portfolio_relative_prices <- renderPlotly({
     # browser()
     shiny::req(tab_all_prices())
-    dt <- tab_all_prices()
-
-    # compute realitve price to first valid date with price info available
-    dt[
-      !is.na(close),
-      first_valid_date := min(date, na.rm = T),
-      by = name
-      ]
-    tmp_min_date <- dt[
-      date == first_valid_date, .(price_first_date = close), by = name
-      ]
-    dt <- dt[tmp_min_date, on = "name"]
-    dt[, price_relative_to_first_date := close/price_first_date]
-    # browser()
 
     # build shared data object
-    shared_portfolio <- highlight_key(dt, ~name, group = "portfolio")
+    shared_portfolio <- highlight_key(
+      tab_all_prices(), ~name, group = "portfolio"
+    )
 
     # build plot
     p <- shared_portfolio %>%
@@ -321,16 +358,62 @@ server_stocks <- function(input, output) {
       layout(
         hovermode = "closest",
         shapes = list(shape_hline(1)),
-        yaxis = list(title = "Relative price to first datum", type = "log")
+        yaxis = list(title = "Relative price to first datum")
       ) %>%
       highlight(
-        on = "plotly_selected",
+        on = "plotly_click",
         off = "plotly_doubleclick",
-        dynamic = TRUE,
-        selectize = TRUE
+        dynamic = TRUE
       )
     return(p)
   })
+
+  # out: table last value ---------------------------------------------------
+  #
+  out_table_portfolio_last <- eventReactive(
+    eventExpr = tab_all_prices(),
+    valueExpr = {
+      shiny::req(tab_all_prices())
+      dt <- tab_all_prices()
+      if (nrow(dt) == 0) {
+        return(data.table())
+      }
+      # browser()
+
+      dt[
+        !is.na(price_relative_to_first_date),
+        max_date := max(date, na.rm = T),
+        by = name
+        ]
+      tab_max_date <- unique(dt[
+        date == max_date, .(name, price_relative_to_first_date)
+        ])
+      tab_max_date <- tab_max_date[
+        order(price_relative_to_first_date, decreasing = T)
+        ]
+      tab_max_date[, percent_change := 100 * (price_relative_to_first_date - 1)]
+
+      # style HTML table
+      res <- DT::datatable(
+        tab_max_date[, .(name, percent_change)],
+        options = list(
+          pageLength = nrow(tab_max_date), paging = F, searching = F
+        ),
+        rownames = F
+      ) %>%
+        formatRound('percent_change', digits = 1) %>%
+        formatStyle(
+          'percent_change',
+          color = styleInterval(0, c('red', 'black')),
+          textAlign = "right"
+        )
+      # res
+      return(res)
+    }
+  )
+  output$table_portfolio_last <- DT::renderDataTable(out_table_portfolio_last())
+
+
 
   # out: corheatmap--------------------------------------------------------
   #

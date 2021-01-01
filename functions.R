@@ -120,7 +120,7 @@ load_and_merge_stock_listings <- function() {
     full.names = T
   )
   TAB_STOCK_LISTING <- rbindlist(lapply(file_stock_lists, fread))
-  TAB_STOCK_LISTING <- unique(TAB_STOCK_LISTING[, .(symbol, name)])
+  TAB_STOCK_LISTING <- unique(TAB_STOCK_LISTING[, .(symbol, name, exchange, assetType)])
   fwrite(TAB_STOCK_LISTING, file = "listing_status_stocks_and_etfs.csv")
 }
 # load_and_merge_stock_listings()

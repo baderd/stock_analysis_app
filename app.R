@@ -121,7 +121,18 @@ ui <- dashboardPage(
                 label = "Enter Yahoo symbol list",
                 value = "GOOG \nNFLX \nAMZN \nEVTCY \nMTUAY \nMRK \nBMWYY \nBNTX",
                 height = "300px"
-              )
+              ),
+              br(),
+              column(
+                width = 6,
+                textInput(inputId = "date1_portfolio", "Start date", today() - 365)
+              ),
+              column(
+                width = 6,
+                textInput(inputId = "date2_portfolio", "End date", today())
+              ),
+              br(),
+              actionButton(inputId = "button_portfolio", label = "Create portfolio")
             ),
             shinydashboard::box(
               title = "Upload custom file",
@@ -149,7 +160,7 @@ ui <- dashboardPage(
               textInput(
                 inputId = "text_portfolio_search",
                 "Enter search text for yahoo symbols",
-                "Evotec"
+                "biontech"
               ),
               DT::DTOutput("tab_portfolio_search")
             )
@@ -164,16 +175,33 @@ ui <- dashboardPage(
         )
       ), # end tabitem
 
+      #+ ----
       # ui portfolio plot -----------------------------------------------
       tabItem(
         tabName = "portfolio_plot",
-        h2("Analyze portfolio of stocks and funds"),
-        h3("Compare relative price development"),
-        plotlyOutput("plot_portfolio_relative_prices", height = "500px"),
-        h3("Correlation of monthly returns"),
-        plotlyOutput("corheatmap", height = "700px"),
+        fluidPage(
+          h2("Analyze portfolio of stocks and funds"),
+          box(
+            title = "Compare relative price development",
+            width = 12,
+            column(
+              width = 9,
+              plotlyOutput("plot_portfolio_relative_prices", height = "500px")
+            ),
+            column(
+              width = 3,
+              DT::dataTableOutput("table_portfolio_last", height = "500px")
+            )
+          ),
+          box(
+            title = "Correlation of monthly returns",
+            width = 12,
+            plotlyOutput("corheatmap", height = "700px")
+          )
+        )
       ),
 
+      #+ ----
       # ui rawdata -----------------------------------------------------
       tabItem(
         tabName = "data",
