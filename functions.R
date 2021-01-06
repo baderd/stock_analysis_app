@@ -94,9 +94,13 @@ load_and_merge_ohlc_from_finanzen_net <- function(
       tmp_tab <- fread(fn, sep = ",")
       tmp_tab[, bname := basename(fn)]
       tmp_tab[, ISIN := tstrsplit(bname, "_", keep = 2)]
-      tmp_tab[, name := gsub(
-        paste0("ohlc_", ISIN, "_(.*)\\.csv"), "\\1", bname
-      ), by = Datum]
+      tmp_tab[,
+        name := gsub(
+          paste0("ohlc_", ISIN, "_(.*)\\.csv"), "\\1", bname
+        ),
+        by = Datum
+        ]
+      tmp_tab[, name := gsub("_", " ", name)]
       tmp_tab[, bname := NULL]
     }
   ))
@@ -119,7 +123,7 @@ load_and_merge_stock_listings <- function() {
     pattern = "listing_status_stocks_and_etfs_.+.csv",
     full.names = T
   )
-  TAB_STOCK_LISTING <- rbindlist(lapply(file_stock_lists, fread))
+  TAB_STOCK_LISTING <- rbindlist(lapply(file_stock_lists, fread), fill = T)
   TAB_STOCK_LISTING <- unique(TAB_STOCK_LISTING[, .(symbol, name, exchange, assetType)])
   fwrite(TAB_STOCK_LISTING, file = "listing_status_stocks_and_etfs.csv")
 }

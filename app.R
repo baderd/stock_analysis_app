@@ -119,7 +119,7 @@ ui <- dashboardPage(
               textAreaInput(
                 inputId = "stocklist",
                 label = "Enter Yahoo symbol list",
-                value = "GOOG \nNFLX \nAMZN \nEVTCY \nMTUAY \nMRK \nBMWYY \nBNTX",
+                value = "GOOG \nNFLX \nAMZN \nEVT.DE \nMTUAY \nMRK \nBMW.DE \nBNTX",
                 height = "300px"
               ),
               br(),
@@ -185,12 +185,12 @@ ui <- dashboardPage(
             title = "Compare relative price development",
             width = 12,
             column(
-              width = 9,
+              width = 8,
               plotlyOutput("plot_portfolio_relative_prices", height = "500px")
             ),
             column(
-              width = 3,
-              DT::dataTableOutput("table_portfolio_last", height = "500px")
+              width = 4,
+              DT::dataTableOutput("table_portfolio_last", width = "350px")
             )
           ),
           box(
