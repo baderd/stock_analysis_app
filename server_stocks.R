@@ -332,6 +332,26 @@ server_stocks <- function(input, output) {
   output$plot_portfolio_relative_prices <- renderPlotly({
     # browser()
     shiny::req(tab_all_prices())
+    tab_portfolio <- tab_all_prices()
+
+    tab_portfolio[, infotext := paste0(
+      "Name: ", name,
+      "<br>Relative price: ", round(price_relative_to_first_date, 2),
+      "<br>Price: ", round(close, 2),
+      "<br>Date: ", date
+    )]
+    if ("yahoo_symbol" %in% names(tab_portfolio)) {
+      tab_portfolio[, infotext := paste0(
+        infotext,
+        "<br>SYMBOL: ", yahoo_symbol
+      )]
+    }
+    if ("ISIN" %in% names(tab_portfolio)) {
+      tab_portfolio[, infotext := paste0(
+        infotext,
+        "<br>ISIN: ", ISIN
+      )]
+    }
 
     # build shared data object
     shared_portfolio <- highlight_key(
@@ -346,13 +366,7 @@ server_stocks <- function(input, output) {
         color = I("grey40"),
         split = ~name,
         hoverinfo = "text",
-        text = ~paste0(
-          "Name: ", name,
-          "<br>SYMBOL: ", yahoo_symbol,
-          "<br>Relative price: ", round(price_relative_to_first_date, 2),
-          "<br>Price: ", round(close, 2),
-          "<br>Date: ", date
-        )
+        text = ~infotext
       ) %>%
       add_lines(showlegend = FALSE) %>%
       layout(
