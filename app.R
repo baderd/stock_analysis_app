@@ -132,7 +132,9 @@ ui <- dashboardPage(
                 textInput(inputId = "date2_portfolio", "End date", today())
               ),
               br(),
-              actionButton(inputId = "button_portfolio", label = "Create portfolio")
+              actionButton(
+                inputId = "button_portfolio", label = "Create portfolio"
+              )
             ),
             shinydashboard::box(
               title = "Upload custom file",
@@ -181,6 +183,17 @@ ui <- dashboardPage(
         tabName = "portfolio_plot",
         fluidPage(
           h2("Analyze portfolio of stocks and funds"),
+          box(
+            title = "Select time to compare",
+            width = 12,
+            sliderInput(
+              inputId = "slider_portfolio",
+              label = "",
+              min = today() - 365,
+              max = today(),
+              value = c(today() - 7, today())
+            )
+          ),
           box(
             title = "Compare relative price development",
             width = 12,

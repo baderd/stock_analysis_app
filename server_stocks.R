@@ -8,7 +8,7 @@ if (file.exists(FILE_STOCK_LIST)) {
 }
 
 
-server_stocks <- function(input, output) {
+server_stocks <- function(input, output, session) {
 
 
   # TAB compare 2 stocks ------------------------------------------------------
@@ -238,7 +238,7 @@ server_stocks <- function(input, output) {
 
   # merge yahoo and custom data ----------------------------------------------
   #
-  tab_all_prices <- reactive({
+  tab_all_prices_raw <- reactive({
     # browser()
     shiny::req(tab_yahoo_portfolio(), tab_custom_potfolio())
     tab_yahoo <- tab_yahoo_portfolio()
@@ -263,21 +263,50 @@ server_stocks <- function(input, output) {
       return(res)
     }
 
-    # compute realitve price to first valid date with price info available
-    res[
-      !is.na(close),
-      first_valid_date := min(date, na.rm = T),
-      by = name
-      ]
-    tmp_min_date <- res[
-      date == first_valid_date, .(price_first_date = close), by = name
-      ]
-    res <- res[tmp_min_date, on = "name"]
-    res[, price_relative_to_first_date := close/price_first_date]
-    # browser()
-
     return(res)
   })
+
+
+  # update slider -----------------------------------------------------------
+  # input date slider for portfolio plot
+  observeEvent(
+    eventExpr = tab_all_prices_raw(),
+    handlerExpr = {
+      updateSliderInput(
+        session = session,
+        inputId = "slider_portfolio",
+        min = min(tab_all_prices_raw()$date, na.rm = T)
+      )
+    }
+  )
+
+
+  # update price table -----------------------------------------------------
+  tab_all_prices <- eventReactive(
+    eventExpr = input$slider_portfolio,
+    valueExpr = {
+      req(tab_all_prices_raw())
+      range_dates <- input$slider_portfolio
+      # subset data
+      res <- tab_all_prices_raw()[date > range_dates[1] & date < range_dates[2]]
+
+      # compute realitve price to first valid date with price info available
+      res[
+        !is.na(close),
+        first_valid_date := min(date, na.rm = T),
+        by = name
+        ]
+      tmp_min_date <- res[
+        date == first_valid_date, .(price_first_date = close), by = name
+        ]
+      res <- res[tmp_min_date, on = "name"]
+      res[, price_relative_to_first_date := close/price_first_date]
+
+      # browser()
+      return(res)
+    }
+  )
+
 
 
   #+ ----
@@ -285,15 +314,15 @@ server_stocks <- function(input, output) {
   # out: validate input --------------------------------------------------------
   tab_validated_input <- reactiveVal(value = data.table())
   observeEvent(
-    eventExpr = tab_all_prices(),
+    eventExpr = tab_all_prices_raw(),
     handlerExpr = {
       # browser()
-      shiny::req(tab_all_prices())
-      if (nrow(tab_all_prices()) == 0) {
+      shiny::req(tab_all_prices_raw())
+      if (nrow(tab_all_prices_raw()) == 0) {
         res <- data.table(WARNING = "No valid data provided!")
       } else {
         tmp_tab <- merge(
-          tab_all_prices(),
+          tab_all_prices_raw(),
           data.table(name = vec_input_symbols()),
           by = "name",
           all = T
